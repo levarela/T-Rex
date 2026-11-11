@@ -582,7 +582,7 @@ function buildRexHead(head, mat, s, hw, hl, hh) {
   const Z = 0.74, X = (v) => v * s * hw, Y = (v) => v * s * hh, ZZ = (v) => v * s * hl * Z;
   const ho = { sx: s * hw, sy: s * hh, sz: s * hl * Z, sq: 3.4, uvLen: 3 * s };
   const upSecs = [
-    [-0.75, 0.5, 0.6, 0.25], [-0.45, 1.05, 0.95, 0.18], [0.1, 1.12, 0.98, 0.11], [0.6, 0.94, 0.92, 0.03], [1.3, 0.76, 0.86, -0.01],
+    [-0.8, 0.7, 0.75, 0.3], [-0.45, 1.05, 0.95, 0.18], [0.1, 1.12, 0.98, 0.11], [0.6, 0.94, 0.92, 0.03], [1.3, 0.76, 0.86, -0.01],
     [2.1, 0.66, 0.8, -0.05], [2.8, 0.6, 0.72, -0.08], [3.15, 0.52, 0.62, -0.11], [3.32, 0.34, 0.46, -0.15], [3.4, 0.03, 0.05, -0.2],
   ];
   head.add(new THREE.Mesh(staticLoft(upSecs, 26, { ...ho, bottom: 0.4 }), mat));
@@ -641,7 +641,7 @@ function makeTheropod(o) {
   const neck = new THREE.Group(); neck.position.set(0, 0.6 * s, 3.25 * s); neck.rotation.x = -0.2; hips.add(neck);
   const neckMid = mk(neck, 0, 0.5 * o.neckL, 0.9 * o.neckL);
   const head = new THREE.Group(); head.position.set(0, 0.95 * s * o.neckL, 1.75 * s * o.neckL); head.rotation.x = 0.25; neck.add(head);
-  const headBase = mk(head, 0, 0.1, -0.15);
+  const headBase = o.rexHead ? mk(head, 0, 0.32, -0.3) : mk(head, 0, 0.1, -0.15);
   const tail = []; let parent = hips; const segL = o.tailL * s;
   for (let i = 0; i < o.tailN; i++) {
     const g = new THREE.Group(); g.position.set(0, i === 0 ? 0.35 * s : 0, i === 0 ? -1.7 * s : -segL); parent.add(g); tail.push(g); parent = g;
@@ -654,7 +654,7 @@ function makeTheropod(o) {
   const bodyRad = [[0.04 * s, 0.05 * s, 0, 2]];
   for (let i = o.tailN - 1; i >= 0; i--) { const k = Math.pow(0.79, i); bodyRad.push([0.95 * s * tb * k, 1.2 * s * tb * k, 0.05 * s * k, 2.3]); }
   bodyRad.push([1.45 * s * b, 1.55 * s * b, -0.05 * s, 2.2], [1.3 * s * b, 1.75 * s * b, -0.35 * s, 2.1],
-    [0.95 * s * nb, 1.15 * s * nb, -0.1 * s, 2.2], [0.72 * s * nb, 0.9 * s * nb, 0, 2.2], [0.6 * s * nb * o.headW, 0.72 * s * nb * hh, 0, 2.4]);
+    [0.95 * s * nb, 1.15 * s * nb, -0.1 * s, 2.2], [0.72 * s * nb, 0.9 * s * nb, 0, 2.2], o.rexHead ? [0.98 * s * o.headW, 0.92 * s * hh, 0.05 * s, 2.6] : [0.6 * s * nb * o.headW, 0.72 * s * nb * hh, 0, 2.4]);
   const body = new Loft(bodyPts.length, 5, 22, mat, { belly: 1.06, uvLen: 3.5 * s });
   root.add(body.mesh);
 
@@ -720,16 +720,16 @@ function makeTheropod(o) {
   // --- brazos
   const arms = [];
   for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.9 * s * b, -0.55 * s, 2.7 * s); hips.add(sh);
-    const ua = capsule(0.13 * s, 0.45 * s * o.armL); ua.translate(0, -0.3 * s * o.armL, 0); sh.add(new THREE.Mesh(ua, mat));
+    const sh = new THREE.Group(); sh.position.set(sx * (o.shoulderX || 0.9) * s * b, (o.shoulderY || -0.55) * s, (o.shoulderZ || 2.7) * s); sh.rotation.z = sx * 0.25; hips.add(sh);
+    const ar = o.armR || 1; const ua = capsule(0.13 * s * ar, 0.45 * s * o.armL); ua.translate(0, -0.3 * s * o.armL, 0); sh.add(new THREE.Mesh(ua, mat));
     const el = new THREE.Group(); el.position.set(0, -0.6 * s * o.armL, 0); sh.add(el);
-    const fa = capsule(0.1 * s, 0.38 * s * o.armL); fa.translate(0, -0.25 * s * o.armL, 0); el.add(new THREE.Mesh(fa, mat));
+    const fa = capsule(0.1 * s * ar, 0.38 * s * o.armL); fa.translate(0, -0.25 * s * o.armL, 0); el.add(new THREE.Mesh(fa, mat));
     for (const a of [-0.25, 0.25]) { const cl = new THREE.Mesh(new THREE.ConeGeometry(0.045 * s, 0.25 * s * Math.min(o.armL, 2), 5), clawMat); cl.position.set(Math.sin(a) * 0.08 * s, -0.52 * s * o.armL, 0.05 * s); cl.rotation.x = Math.PI * 0.8; el.add(cl); }
-    sh.rotation.x = 0.9; el.rotation.x = -1.2;
+    sh.rotation.x = o.armX ?? 0.9; el.rotation.x = o.elbowX ?? -1.2;
     arms.push({ sh, el });
   }
   shadowed(root);
-  const P = { root, hips, neck, head, jaw, tail, legs, arms, s, hipY: 4.75 * s, body, bodyPts, bodyRad,
+  const P = { root, hips, neck, head, jaw, tail, legs, arms, s, hipY: 4.75 * s, body, bodyPts, bodyRad, armX: o.armX ?? 0.9,
     _inv: new THREE.Matrix4(), _pts: Array.from({ length: 12 }, () => new THREE.Vector3()) };
   P._pts = Array.from({ length: Math.max(bodyPts.length, 8) }, () => new THREE.Vector3());
   return P;
@@ -763,7 +763,7 @@ function animTheropod(P, phase, stride, dt, o = {}) {
     g.rotation.y = Math.sin(t * 1.6 + phase * 0.5 - i * 0.55) * (0.035 + stride * 0.04) + (o.turn || 0) * 0.12 - Math.sin(phase) * 0.03 * stride;
     g.rotation.x = 0.03 + Math.sin(phase * 2 - i * 0.6) * 0.025 * stride - (i === 0 ? 0.1 : 0);
   });
-  P.arms.forEach((A, k) => { A.sh.rotation.x = 0.9 + Math.sin(phase + k) * 0.15 * stride; });
+  P.arms.forEach((A, k) => { A.sh.rotation.x = P.armX + Math.sin(phase + k) * 0.15 * stride; });
   updateSkin(P);
 }
 
@@ -1178,7 +1178,7 @@ function buildFence(night) {
 // Entidades
 // =====================================================================
 const rex = {
-  P: makeTheropod({ s: 1, bulk: 1.12, neckB: 1.35, tailB: 1.05, skin: rexSkin, rexHead: true, headL: 1.1, headW: 1.0, headH: 1.0, neckL: 1, armL: 1, tailN: 7, tailL: 1.35, sickle: false }),
+  P: makeTheropod({ s: 1, bulk: 1.12, neckB: 1.35, tailB: 1.05, skin: rexSkin, rexHead: true, headL: 1.1, headW: 1.0, headH: 1.0, neckL: 1, armL: 1.5, armR: 1.4, shoulderX: 1.3, shoulderY: -0.75, shoulderZ: 2.95, armX: -0.35, elbowX: -1.0, tailN: 7, tailL: 1.35, sickle: false }),
   pos: new THREE.Vector3(), yaw: 0, speed: 0, phase: 0, health: 100, stamina: 100,
   biteT: -1, biteHit: false, roarT: -1, turn: 0, lastStep: 0, hurtT: 0, exhausted: false,
 };
