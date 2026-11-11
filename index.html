@@ -570,11 +570,64 @@ function capsule(r, len, axis = 'y') {
 // =====================================================================
 // Terópodos (T-Rex y velociraptors comparten esqueleto procedural)
 // =====================================================================
-const toothMat = new THREE.MeshStandardMaterial({ color: 0xd9cba4, roughness: 0.35 });
+const toothMat = new THREE.MeshStandardMaterial({ color: 0xb8a57a, roughness: 0.45 });
 const mouthMat = new THREE.MeshStandardMaterial({ color: 0x5a1814, roughness: 0.35 });
 const eyeMat = new THREE.MeshStandardMaterial({ color: 0xd0a020, roughness: 0.05, metalness: 0.0, emissive: 0x241400 });
 const pupilMat = new THREE.MeshStandardMaterial({ color: 0x020202, roughness: 0.05 });
 const clawMat = new THREE.MeshStandardMaterial({ color: 0x1e1a14, roughness: 0.3 });
+
+// Cabeza de T-Rex: cráneo alto y en caja, hocico romo, cejas pesadas, mejillas anchas,
+// mandíbula profunda con papada y dientes superiores que asoman con la boca cerrada.
+function buildRexHead(head, mat, s, hw, hl, hh) {
+  const Z = 0.74, X = (v) => v * s * hw, Y = (v) => v * s * hh, ZZ = (v) => v * s * hl * Z;
+  const ho = { sx: s * hw, sy: s * hh, sz: s * hl * Z, sq: 3.4, uvLen: 3 * s };
+  const upSecs = [
+    [-0.75, 0.5, 0.6, 0.25], [-0.45, 1.05, 0.95, 0.18], [0.1, 1.12, 0.98, 0.11], [0.6, 0.94, 0.92, 0.03], [1.3, 0.76, 0.86, -0.01],
+    [2.1, 0.66, 0.8, -0.05], [2.8, 0.6, 0.72, -0.08], [3.15, 0.52, 0.62, -0.11], [3.32, 0.34, 0.46, -0.15], [3.4, 0.03, 0.05, -0.2],
+  ];
+  head.add(new THREE.Mesh(staticLoft(upSecs, 26, { ...ho, bottom: 0.4 }), mat));
+  const widthAt = (secs, z) => { for (let i = 0; i < secs.length - 1; i++) if (z <= secs[i + 1][0]) { const t = (z - secs[i][0]) / (secs[i + 1][0] - secs[i][0]); return lerp(secs[i][1], secs[i + 1][1], t); } return 0; };
+  const add = (geo, m, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, parent = head) => {
+    const o = new THREE.Mesh(geo, m); o.position.set(X(x), Y(y), ZZ(z)); o.scale.set(sx * s, sy * s, sz * s); o.rotation.set(rx, ry, rz); parent.add(o); return o;
+  };
+  for (const sd of [-1, 1]) {
+    add(SPH, mat, sd * 0.7, 0.9, 0.62, 0.15, 0.11, 0.36, 0.25, sd * 0.2);          // cuerno lagrimal (ceja)
+    add(SPH, mat, sd * 0.88, 0.8, 0.1, 0.14, 0.11, 0.24, 0, sd * 0.3);              // protuberancia postorbital
+    add(SPH, mat, sd * 0.96, 0.68, 0.4, 0.12, 0.06, 0.2, 0.3, sd * 0.3);          // párpado
+    add(SPH, pupilMat, sd * 0.93, 0.57, 0.38, 0.11, 0.1, 0.13);                     // cuenca
+    add(SPH, eyeMat, sd * 0.99, 0.57, 0.42, 0.075, 0.075, 0.075);                   // ojo
+    add(SPH, pupilMat, sd * 1.05, 0.57, 0.46, 0.02, 0.06, 0.02, 0, sd * 0.5);     // pupila
+    add(SPH, mat, sd * 1.02, 0.05, -0.15, 0.3, 0.38, 0.75);                         // mejilla (yugal)
+    add(SPH, pupilMat, sd * 0.33, 0.28, 3.12, 0.07, 0.05, 0.12, 0, sd * 0.3);       // narina
+    for (let i = 0; i < 6; i++) add(SPH, mat, sd * 0.14, 0.78 - i * 0.04, 1.1 + i * 0.36, 0.09, 0.05, 0.17); // rugosidades nasales
+  }
+  const jaw = new THREE.Group(); jaw.position.set(0, Y(-0.3), ZZ(0.05)); head.add(jaw);
+  const loSecs = [
+    [-0.75, 0.5, 0.35, -0.15], [-0.4, 0.98, 0.58, -0.22], [0.3, 0.84, 0.52, -0.2], [1.1, 0.62, 0.43, -0.17],
+    [1.9, 0.5, 0.36, -0.13], [2.6, 0.42, 0.3, -0.1], [2.9, 0.3, 0.22, -0.08], [3.0, 0.04, 0.05, -0.07],
+  ];
+  jaw.add(new THREE.Mesh(staticLoft(loSecs, 22, { ...ho, sq: 3, top: 0.3 }), mat));
+  add(SPH, mat, 0, -0.58, -0.25, 0.72, 0.42, 1.0, 0, 0, 0, jaw);                  // papada
+  const tongue = new THREE.Mesh(capsule(0.3 * s * hw, 1.6 * s * hl * Z, 'z'), mouthMat); tongue.scale.y = 0.3; tongue.position.set(0, Y(-0.02), ZZ(1.2)); jaw.add(tongue);
+  const palate = new THREE.Mesh(new THREE.PlaneGeometry(X(1.1), ZZ(2.8)), mouthMat); palate.rotation.x = Math.PI / 2; palate.position.set(0, Y(-0.3), ZZ(1.6)); head.add(palate);
+  const cone = new THREE.ConeGeometry(0.075 * s, 0.42 * s, 6);
+  const up = [], lo = [], q = new THREE.Quaternion(), e = new THREE.Euler(), mm = new THREE.Matrix4(), V = THREE.Vector3;
+  for (const sd of [-1, 1]) {
+    for (let i = 0; i < 11; i++) {
+      const k = i / 10, z = 0.4 + k * 2.6, sc = 0.95 - Math.abs(k - 0.35) * 0.55 + (i % 2) * 0.1;
+      e.set(Math.PI + 0.12, 0, sd * 0.08); q.setFromEuler(e);
+      up.push({ geo: cone, m: mm.clone().compose(new V(sd * X(widthAt(upSecs, z) * 0.66), Y(-0.33 - 0.12 * sc), ZZ(z)), q, new V(sc, sc, sc)) });
+      const zl = 0.3 + k * 2.4; e.set(-0.1, 0, -sd * 0.05); q.setFromEuler(e);
+      lo.push({ geo: cone, m: mm.clone().compose(new V(sd * X(widthAt(loSecs, zl) * 0.72), Y(0.1 * sc), ZZ(zl)), q, new V(sc * 0.85, sc * 0.75, sc * 0.85)) });
+    }
+    for (let i = 0; i < 2; i++) { // dientes frontales
+      e.set(Math.PI + 0.15, 0, 0); q.setFromEuler(e);
+      up.push({ geo: cone, m: mm.clone().compose(new V(sd * X(0.1 + i * 0.16), Y(-0.42), ZZ(3.2 - i * 0.05)), q, new V(0.55, 0.6, 0.55)) });
+    }
+  }
+  head.add(new THREE.Mesh(mergeGeos(up), toothMat)); jaw.add(new THREE.Mesh(mergeGeos(lo), toothMat));
+  return jaw;
+}
 
 function makeTheropod(o) {
   const s = o.s, b = o.bulk, hh = o.headH || 1;
@@ -607,6 +660,9 @@ function makeTheropod(o) {
 
   // --- cabeza (cráneo esculpido + mandíbula)
   const hl = o.headL, hw = o.headW, ho = { sx: s * hw, sy: s * hh, sz: s * hl, sq: 2.8, uvLen: 3 * s };
+  let jaw;
+  if (o.rexHead) jaw = buildRexHead(head, mat, s, hw, hl, hh);
+  else {
   const skull = new THREE.Mesh(staticLoft([
     [-0.55, 0.3, 0.35, 0.2], [-0.35, 0.85, 0.8, 0.15], [0.25, 1.05, 0.88, 0.1], [0.9, 0.86, 0.74, 0.0], [1.7, 0.64, 0.6, -0.07],
     [2.5, 0.5, 0.47, -0.13], [3.0, 0.4, 0.34, -0.18], [3.18, 0.22, 0.2, -0.22], [3.24, 0.02, 0.02, -0.24],
@@ -618,7 +674,7 @@ function makeTheropod(o) {
     const pup = new THREE.Mesh(SPH, pupilMat); pup.scale.set(0.035 * s, 0.1 * s, 0.035 * s); pup.position.set(sx * 1.0 * s * hw, 0.38 * s * hh, 0.46 * s * hl); head.add(pup);
     const nos = new THREE.Mesh(SPH, pupilMat); nos.scale.set(0.05 * s, 0.035 * s, 0.09 * s); nos.position.set(sx * 0.22 * s * hw, 0.08 * s * hh, 2.95 * s * hl); head.add(nos);
   }
-  const jaw = new THREE.Group(); jaw.position.set(0, -0.46 * s * hh, 0.25 * s * hl); head.add(jaw);
+  jaw = new THREE.Group(); jaw.position.set(0, -0.46 * s * hh, 0.25 * s * hl); head.add(jaw);
   const lj = new THREE.Mesh(staticLoft([
     [-0.65, 0.35, 0.25, 0.0], [-0.3, 0.92, 0.42, -0.05], [0.6, 0.86, 0.4, -0.05], [1.6, 0.62, 0.31, -0.05],
     [2.4, 0.46, 0.25, -0.03], [2.82, 0.3, 0.17, -0.02], [2.92, 0.04, 0.04, -0.02],
@@ -636,6 +692,7 @@ function makeTheropod(o) {
     lo.push({ geo: cone, m: mm.clone().compose(new THREE.Vector3(sx * lerp(0.58, 0.27, k) * s * hw, 0.2 * s * hh * sc, (0.3 + k * 2.3) * s * hl), q, new THREE.Vector3(sc * 0.9, sc * 0.85, sc * 0.9)) });
   }
   head.add(new THREE.Mesh(mergeGeos(up), toothMat)); jaw.add(new THREE.Mesh(mergeGeos(lo), toothMat));
+  }
 
   // --- patas (muslos musculosos con loft propio)
   const legs = [];
@@ -1121,7 +1178,7 @@ function buildFence(night) {
 // Entidades
 // =====================================================================
 const rex = {
-  P: makeTheropod({ s: 1, bulk: 1.12, neckB: 1.1, tailB: 1.05, skin: rexSkin, headL: 1.15, headW: 1.1, headH: 1.1, neckL: 1, armL: 1, tailN: 7, tailL: 1.35, sickle: false }),
+  P: makeTheropod({ s: 1, bulk: 1.12, neckB: 1.35, tailB: 1.05, skin: rexSkin, rexHead: true, headL: 1.1, headW: 1.0, headH: 1.0, neckL: 1, armL: 1, tailN: 7, tailL: 1.35, sickle: false }),
   pos: new THREE.Vector3(), yaw: 0, speed: 0, phase: 0, health: 100, stamina: 100,
   biteT: -1, biteHit: false, roarT: -1, turn: 0, lastStep: 0, hurtT: 0, exhausted: false,
 };
