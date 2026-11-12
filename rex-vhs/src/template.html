@@ -1,0 +1,89 @@
+<!--HEAD-->
+<title>Hora de Almorzar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+  /* Layout: una sola pantalla; "televisor" 4:3 centrado y el OSD de la videocasetera encima. */
+  :root {
+    color-scheme: dark;
+    --bg: #040507;          /* marco del televisor */
+    --osd: #f1f1e6;         /* blanco de OSD de VCR */
+    --osd-dim: #b9bcae;
+    --osd-edge: #10131a;    /* contorno del texto */
+    --alert: #ff4b3e;       /* REC / peligro */
+    --tape-blue: #1d2cd0;   /* azul "sin señal" */
+    --font-osd: "VT323", "Menlo", "Monaco", "Courier New", monospace;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--osd); font-family: var(--font-osd); overflow: hidden; }
+  #wrap {
+    height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+    padding-block: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: var(--bg);
+  }
+  #stage { position: relative; overflow: hidden; background: var(--tape-blue); user-select: none; -webkit-user-select: none; cursor: crosshair; line-height: 1.05; }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .osd {
+    position: absolute; white-space: pre; letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+    text-shadow: 0.06em 0.06em 0 var(--osd-edge), -0.03em 0 0 rgba(255, 60, 60, 0.55), 0.04em 0 0 rgba(60, 200, 255, 0.5);
+    filter: blur(0.35px);
+  }
+  .tl { top: 5%; left: 6%; } .tr { top: 5%; right: 6%; text-align: right; }
+  .bl { bottom: 7%; left: 6%; } .br { bottom: 7%; right: 6%; text-align: right; }
+  .small { font-size: 0.72em; color: var(--osd-dim); }
+  .alert { color: var(--alert); animation: blink 0.5s steps(2) infinite; }
+  .row { display: flex; align-items: center; justify-content: flex-end; gap: 0.6em; }
+  .bar { display: inline-block; width: 7em; height: 0.55em; border: 0.08em solid var(--osd); padding: 0.08em; box-sizing: border-box; }
+  .bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--osd) 0 0.5em, transparent 0.5em 0.62em); }
+  .bar i.low { background: var(--alert); }
+  #osd-warn { top: 14%; left: 6%; color: var(--alert); animation: blink 0.6s steps(2) infinite; }
+  #osd-msg { top: 30%; left: 0; right: 0; text-align: center; font-size: 1.5em; }
+  #sniff { bottom: 6%; left: 50%; transform: translateX(-50%); text-align: center; }
+  #osd-arrow { display: inline-block; font-size: 1.5em; line-height: 1; transition: transform 0.08s linear; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5em; text-align: center; padding: 0 6%; }
+  .screen h1 { margin: 0; font-size: 3.1em; font-weight: 400; letter-spacing: 0.06em; line-height: 0.95; text-wrap: balance; }
+  .screen p { margin: 0; white-space: pre-line; }
+  .screen .osd { position: static; }
+  #title { background: linear-gradient(rgba(4, 5, 7, 0.1), rgba(4, 5, 7, 0.55)); }
+  #end { background: rgba(4, 5, 7, 0.5); }
+  .keys { display: grid; grid-template-columns: auto auto; gap: 0.1em 1.2em; text-align: left; font-size: 0.78em; color: var(--osd-dim); }
+  .keys b { font-weight: 400; color: var(--osd); }
+  .go { animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+  @media (prefers-reduced-motion: reduce) { .alert, .go, #osd-warn { animation: none; } }
+</style>
+<!--BODY-->
+<div id="wrap">
+  <div id="stage">
+    <div id="hud" hidden>
+      <div class="osd tl" id="osd-play">PLAY ▶</div>
+      <div class="osd" id="osd-warn" hidden></div>
+      <div class="osd tr">SP  ESCENA 01<br><span class="small" id="osd-prey"></span></div>
+      <div class="osd bl"><span id="osd-timer">-00:01:30:00</span><br><span class="small">OCT. 3 1993  PM 9:47</span></div>
+      <div class="osd br small"><div class="row">VIDA <span class="bar"><i id="osd-hp"></i></span></div><div class="row">AGUANTE <span class="bar"><i id="osd-st"></i></span></div><div id="osd-roar"></div></div>
+      <div class="osd" id="sniff"><span id="osd-arrow">▲</span><br><span class="small">OLFATO <span id="osd-dist"></span></span></div>
+      <div class="osd" id="osd-msg" hidden></div>
+    </div>
+    <div class="screen" id="title">
+      <p class="osd small">CINTA 01 · DEMO</p>
+      <h1 class="osd">HORA DE<br>ALMORZAR</h1>
+      <p class="osd small">Sos el rey del recinto. La cerca está rota.<br>Almorzate al auditor antes de que se acabe la cinta.<br>Fresco esquiva: cansalo, tumbalo de un rugido y mordé.</p>
+      <div class="osd keys">
+        <b>W A S D / flechas</b><span>caminar y girar</span>
+        <b>SHIFT</b><span>correr (gasta aguante)</span>
+        <b>ESPACIO / clic</b><span>morder</span>
+        <b>R</b><span>rugir: espanta presas y raptores</span>
+        <b>P · M · F</b><span>pausa · silencio · pantalla completa</span>
+      </div>
+      <p class="osd go">▶ ENTER O CLIC PARA DARLE PLAY</p>
+    </div>
+    <div class="screen" id="end" hidden>
+      <h1 class="osd" id="end-h"></h1>
+      <p class="osd" id="end-p"></p>
+      <p class="osd go">◀◀ ENTER PARA REBOBINAR</p>
+    </div>
+  </div>
+</div>
+<script>/*BUNDLE*/</script>

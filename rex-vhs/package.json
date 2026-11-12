@@ -1,0 +1,15 @@
+{
+  "name": "rex-vhs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Demo: juego de acción en 3ra persona con un T-rex y estética VHS",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}
